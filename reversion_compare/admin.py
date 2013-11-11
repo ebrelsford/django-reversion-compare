@@ -22,18 +22,15 @@ from django.utils.text import capfirst
 from django.utils.translation import ugettext as _
 
 from reversion.admin import VersionAdmin
-from reversion.models import Version, VERSION_TYPE_CHOICES, VERSION_CHANGE, \
-    has_int_pk
+from reversion.models import has_int_pk
 
 from reversion_compare.forms import SelectDiffForm
-from reversion_compare.helpers import html_diff, compare_queryset
+from reversion_compare.helpers import html_diff
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
 
 logger = logging.getLogger(__name__)
-
-VERSION_TYPE_DICT = dict(VERSION_TYPE_CHOICES)
 
 
 class CompareObject(object):
@@ -145,45 +142,6 @@ class CompareObject(object):
                 missing_ids = list(target_ids.difference(set(missing_objects.values_list('pk', flat=True))))
 
         return versions, missing_objects, missing_ids
-
-    def get_debug(self):
-        if not settings.DEBUG:
-            return
-
-        result = [
-            "field..............: %r" % self.field,
-            "field_name.........: %r" % self.field_name,
-            "field internal type: %r" % self.field.get_internal_type(),
-            "field_dict.........: %s" % repr(self.version.field_dict),
-            "adapter............: %r (follow: %r)" % (self.adapter, ", ".join(self.adapter.follow)),
-            "has_int_pk ........: %r" % self.has_int_pk,
-            "obj................: %r (pk: %s, id: %s)" % (self.obj, self.obj.pk, id(self.obj)),
-            "version............: %r (pk: %s, id: %s)" % (self.version, self.version.pk, id(self.version)),
-            "value..............: %r" % self.value,
-            "to string..........: %s" % repr(self.to_string()),
-            "related............: %s" % repr(self.get_related()),
-        ]
-        m2m_versions, missing_objects, missing_ids = self.get_many_to_many()
-        if m2m_versions or missing_objects or missing_ids:
-            result.append(
-                "many-to-many.......: %s" % ", ".join(
-                    ["%s (%s)" % (item, VERSION_TYPE_DICT[item.type]) for item in m2m_versions]
-                )
-            )
-
-            if missing_objects:
-                result.append("missing m2m objects: %s" % repr(missing_objects))
-            else:
-                result.append("missing m2m objects: (has no)")
-
-            if missing_ids:
-                result.append("missing m2m IDs....: %s" % repr(missing_ids))
-            else:
-                result.append("missing m2m IDs....: (has no)")
-        else:
-            result.append("many-to-many.......: (has no)")
-
-        return result
 
 
     def debug(self):
