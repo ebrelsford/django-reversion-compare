@@ -106,12 +106,8 @@ class CompareObject(object):
         if self.has_int_pk:
             ids = [int(v) for v in self.value]  # is: version.field_dict[field.name]
 
-<<<<<<< HEAD
-        # get instance of reversion.models.Revision(): A group of related object versions.
-=======
         # get instance of reversion.models.Revision():
         # A group of related object versions.
->>>>>>> dbe18d567dd247c2a45460a593732f163007705d
         old_revision = self.version.revision
 
         # Get the related model of the current field:
@@ -150,8 +146,6 @@ class CompareObject(object):
 
         return versions, missing_objects, missing_ids
 
-<<<<<<< HEAD
-=======
     def get_debug(self):
         if not settings.DEBUG:
             return
@@ -190,7 +184,6 @@ class CompareObject(object):
             result.append("many-to-many.......: (has no)")
 
         return result
->>>>>>> dbe18d567dd247c2a45460a593732f163007705d
 
     def debug(self):
         if not settings.DEBUG:
@@ -228,11 +221,7 @@ class CompareObjects(object):
     def changed(self):
         """ return True if at least one field has changed values. """
 
-<<<<<<< HEAD
-        if self.field.get_internal_type() == "ManyToManyField": # FIXME!
-=======
         if self.field.get_internal_type() == "ManyToManyField":  # FIXME!
->>>>>>> dbe18d567dd247c2a45460a593732f163007705d
             info = self.get_m2m_change_info()
             keys = (
                 "changed_items", "removed_items", "added_items",
