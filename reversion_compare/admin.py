@@ -18,6 +18,7 @@ from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template.loader import render_to_string
+from django.utils.http import urlencode
 from django.utils.text import capfirst
 from django.utils.translation import ugettext as _
 
@@ -38,11 +39,11 @@ class CompareObject(object):
         self.field = field
         self.field_name = field_name
         self.obj = obj
-        self.version = version # instance of reversion.models.Version()
+        self.version = version  # instance of reversion.models.Version()
         self.has_int_pk = has_int_pk
         self.adapter = adapter
-
-        self.value = version.field_dict[field_name]
+        # try and get a value, if none punt
+        self.value =  version.field_dict.get(field_name, "Field Didn't exist!")
 
     def _obj_repr(self, obj):
         # FIXME: How to create a better representation of the current value?
@@ -69,7 +70,7 @@ class CompareObject(object):
         if isinstance(self.value, basestring):
             return self.value
         else:
-            self._obj_repr(self.value)
+            return self._obj_repr(self.value)
 
     def __cmp__(self, other):
         raise NotImplemented()
@@ -80,7 +81,7 @@ class CompareObject(object):
         if self.value != other.value:
             return False
 
-        if self.field.get_internal_type() == "ForeignKey": # FIXME!
+        if self.field.get_internal_type() == "ForeignKey":  # FIXME!
             if self.version.field_dict != other.version.field_dict:
                 return False
 
@@ -99,13 +100,18 @@ class CompareObject(object):
         """
         returns a queryset with all many2many objects
         """
-        if self.field.get_internal_type() != "ManyToManyField": # FIXME!
+        if self.field.get_internal_type() != "ManyToManyField":  # FIXME!
             return (None, None, None)
 
         if self.has_int_pk:
-            ids = [int(v) for v in self.value] # is: version.field_dict[field.name]
+            ids = [int(v) for v in self.value]  # is: version.field_dict[field.name]
 
+<<<<<<< HEAD
         # get instance of reversion.models.Revision(): A group of related object versions.
+=======
+        # get instance of reversion.models.Revision():
+        # A group of related object versions.
+>>>>>>> dbe18d567dd247c2a45460a593732f163007705d
         old_revision = self.version.revision
 
         # Get the related model of the current field:
@@ -122,7 +128,8 @@ class CompareObject(object):
 #        logger.debug("versions: %s", versions)
 
         if self.has_int_pk:
-            # The primary_keys would be stored in a text field -> convert it to integers
+            # The primary_keys would be stored in a text field -> convert
+            # it to integers
             # This is interesting in different places!
             for version in versions:
                 version.object_id = int(version.object_id)
@@ -143,6 +150,47 @@ class CompareObject(object):
 
         return versions, missing_objects, missing_ids
 
+<<<<<<< HEAD
+=======
+    def get_debug(self):
+        if not settings.DEBUG:
+            return
+
+        result = [
+            "field..............: %r" % self.field,
+            "field_name.........: %r" % self.field_name,
+            "field internal type: %r" % self.field.get_internal_type(),
+            "field_dict.........: %s" % repr(self.version.field_dict),
+            "adapter............: %r (follow: %r)" % (self.adapter, ", ".join(self.adapter.follow)),
+            "has_int_pk ........: %r" % self.has_int_pk,
+            "obj................: %r (pk: %s, id: %s)" % (self.obj, self.obj.pk, id(self.obj)),
+            "version............: %r (pk: %s, id: %s)" % (self.version, self.version.pk, id(self.version)),
+            "value..............: %r" % self.value,
+            "to string..........: %s" % repr(self.to_string()),
+            "related............: %s" % repr(self.get_related()),
+        ]
+        m2m_versions, missing_objects, missing_ids = self.get_many_to_many()
+        if m2m_versions or missing_objects or missing_ids:
+            result.append(
+                "many-to-many.......: %s" % ", ".join(
+                    ["%s" % item for item in m2m_versions]
+                )
+            )
+
+            if missing_objects:
+                result.append("missing m2m objects: %s" % repr(missing_objects))
+            else:
+                result.append("missing m2m objects: (has no)")
+
+            if missing_ids:
+                result.append("missing m2m IDs....: %s" % repr(missing_ids))
+            else:
+                result.append("missing m2m IDs....: (has no)")
+        else:
+            result.append("many-to-many.......: (has no)")
+
+        return result
+>>>>>>> dbe18d567dd247c2a45460a593732f163007705d
 
     def debug(self):
         if not settings.DEBUG:
@@ -180,7 +228,11 @@ class CompareObjects(object):
     def changed(self):
         """ return True if at least one field has changed values. """
 
+<<<<<<< HEAD
         if self.field.get_internal_type() == "ManyToManyField": # FIXME!
+=======
+        if self.field.get_internal_type() == "ManyToManyField":  # FIXME!
+>>>>>>> dbe18d567dd247c2a45460a593732f163007705d
             info = self.get_m2m_change_info()
             keys = (
                 "changed_items", "removed_items", "added_items",
@@ -215,6 +267,7 @@ class CompareObjects(object):
         return m2m_data1, m2m_data2
 
     M2M_CHANGE_INFO = None
+
     def get_m2m_change_info(self):
         if self.M2M_CHANGE_INFO is not None:
             return self.M2M_CHANGE_INFO
@@ -569,15 +622,18 @@ class BaseCompareVersionAdmin(VersionAdmin):
         version_id1 = form.cleaned_data["version_id1"]
         version_id2 = form.cleaned_data["version_id2"]
 
-        object_id = unquote(object_id) # Underscores in primary key get quoted to "_5F"
+        if version_id1 > version_id2:
+            # Compare always the newest one (#2) with the older one (#1)
+            version_id1, version_id2 = version_id2, version_id1
+
+        object_id = unquote(object_id)  # Underscores in primary key get quoted to "_5F"
         obj = get_object_or_404(self.model, pk=object_id)
         queryset = self.revision_manager.get_for_object(obj)
         version1 = get_object_or_404(queryset, pk=version_id1)
         version2 = get_object_or_404(queryset, pk=version_id2)
 
-        if version_id1 > version_id2:
-            # Compare always the newest one with the older one
-            version1, version2 = version2, version1
+        next_version = queryset.filter(pk__gt=version_id2).last()
+        prev_version = queryset.filter(pk__lt=version_id1).first()
 
         compare_data, has_unfollowed_fields = self.compare(obj, version1, version2)
 
@@ -598,6 +654,18 @@ class BaseCompareVersionAdmin(VersionAdmin):
             "original": obj,
             "history_url": reverse("%s:%s_%s_history" % (self.admin_site.name, opts.app_label, opts.module_name), args=(quote(obj.pk),)),
         }
+
+        if next_version:
+            next_url = request.path + '?' + urlencode({
+                'version_id2': next_version.id,
+                'version_id1': version2.id, })
+            context.update({'next_url': next_url})
+        if prev_version:
+            prev_url = request.path + '?' + urlencode({
+                'version_id2': version1.id,
+                'version_id1': prev_version.id, })
+            context.update({'prev_url': prev_url})
+
         extra_context = extra_context or {}
         context.update(extra_context)
         return render_to_response(self.compare_template or self._get_template_list("compare.html"),
